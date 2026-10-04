@@ -1,9 +1,17 @@
 {
   "event_id": "sample-008",
   "event_type": "SEGMENT_CONFIRMED",
-  "aggregate_type": "travel_party",
-  "aggregate_id": "aggregate-008",
+  "aggregate_type": "booking_segment",
+  "aggregate_id": "seg-sample",
   "occurred_at": "2026-09-20T12:00:00+08:00",
   "version": 1,
-  "summary": "假期联程保障协商领域样例"
+  "summary": "假期联程保障协商领域样例",
+  "payload": {
+    "party_id": "party-sample",
+    "segment_kind": "train",
+    "supplier": "铁路12306",
+    "supplier_order_id": "E20260920001",
+    "supplier_status": "ticketed",
+    "timezone": "Asia/Shanghai"
+  }
 }

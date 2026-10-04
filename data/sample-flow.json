@@ -1,0 +1,274 @@
+[
+  {
+    "event_id": "evt-001",
+    "event_type": "SEGMENT_CONFIRMED",
+    "aggregate_type": "booking_segment",
+    "aggregate_id": "seg-train",
+    "occurred_at": "2026-09-20T10:00:00+08:00",
+    "version": 1,
+    "summary": "北京→西安火车出票",
+    "payload": {
+      "party_id": "party-01",
+      "segment_kind": "train",
+      "supplier": "铁路12306",
+      "supplier_order_id": "E20260930001",
+      "supplier_status": "ticketed",
+      "timezone": "Asia/Shanghai"
+    }
+  },
+  {
+    "event_id": "evt-002",
+    "event_type": "SEGMENT_CONFIRMED",
+    "aggregate_type": "booking_segment",
+    "aggregate_id": "seg-flight",
+    "occurred_at": "2026-09-20T10:05:00+08:00",
+    "version": 1,
+    "summary": "西安→昆明国内航班出票（跨午夜，当地时间 10-01 00:40 起飞）",
+    "payload": {
+      "party_id": "party-01",
+      "segment_kind": "domestic_flight",
+      "supplier": "航司A",
+      "supplier_order_id": "A-88012345",
+      "supplier_status": "ticketed",
+      "timezone": "Asia/Shanghai"
+    }
+  },
+  {
+    "event_id": "evt-003",
+    "event_type": "SEGMENT_CONFIRMED",
+    "aggregate_type": "booking_segment",
+    "aggregate_id": "seg-hotel",
+    "occurred_at": "2026-09-20T10:10:00+08:00",
+    "version": 1,
+    "summary": "昆明酒店预订成功",
+    "payload": {
+      "party_id": "party-01",
+      "segment_kind": "hotel",
+      "supplier": "昆明某酒店",
+      "supplier_order_id": "H-66001",
+      "supplier_status": "booked",
+      "timezone": "Asia/Shanghai"
+    }
+  },
+  {
+    "event_id": "evt-004",
+    "event_type": "SEGMENT_CONFIRMED",
+    "aggregate_type": "booking_segment",
+    "aggregate_id": "seg-intl",
+    "occurred_at": "2026-09-20T10:15:00+08:00",
+    "version": 1,
+    "summary": "昆明→清迈境外段出票（到达按清迈当地时间）",
+    "payload": {
+      "party_id": "party-01",
+      "segment_kind": "international",
+      "supplier": "航司B",
+      "supplier_order_id": "B-550987",
+      "supplier_status": "ticketed",
+      "timezone": "Asia/Shanghai"
+    }
+  },
+  {
+    "event_id": "evt-005",
+    "event_type": "DOCUMENT_RESTRICTION_FLAGGED",
+    "aggregate_type": "travel_party",
+    "aggregate_id": "party-01",
+    "occurred_at": "2026-09-25T09:00:00+08:00",
+    "version": 1,
+    "summary": "成员 m-02 护照有效期不足六个月，仅影响境外段",
+    "payload": {
+      "member_id": "m-02",
+      "valid_until": "2026-11-30",
+      "restricted_segment_ids": ["seg-intl"]
+    }
+  },
+  {
+    "event_id": "evt-006",
+    "event_type": "DISRUPTION_RECEIVED",
+    "aggregate_type": "booking_segment",
+    "aggregate_id": "seg-train",
+    "occurred_at": "2026-09-30T21:05:00+08:00",
+    "version": 2,
+    "summary": "火车延误 180 分钟，原定接驳的跨午夜航班面临误机",
+    "payload": {
+      "cause": "delay",
+      "detected_at": "2026-09-30T21:05:00+08:00"
+    }
+  },
+  {
+    "event_id": "evt-007",
+    "event_type": "OPTION_PROPOSED",
+    "aggregate_type": "recovery_option",
+    "aggregate_id": "opt-01",
+    "occurred_at": "2026-09-30T21:20:00+08:00",
+    "version": 1,
+    "summary": "方案：改签西安→昆明航班并拆分受限成员的境外段",
+    "payload": {
+      "party_id": "party-01",
+      "disruption_event_id": "evt-006",
+      "option_kind": "rebook",
+      "added_cost": { "amount": 180, "currency": "CNY" },
+      "forfeited_benefits": ["原航班经济舱前排座位", "火车原席位等级差价不退"],
+      "pending_suppliers": ["航司A", "航司B"]
+    }
+  },
+  {
+    "event_id": "evt-008",
+    "event_type": "OPTION_FREEZED",
+    "aggregate_type": "recovery_option",
+    "aggregate_id": "opt-01",
+    "occurred_at": "2026-09-30T21:25:00+08:00",
+    "version": 2,
+    "summary": "方案快照冻结，22:30 前确认有效",
+    "payload": {
+      "freeze_id": "frz-01",
+      "expires_at": "2026-09-30T22:30:00+08:00"
+    }
+  },
+  {
+    "event_id": "evt-009",
+    "event_type": "PRICE_PROMISED",
+    "aggregate_type": "recovery_option",
+    "aggregate_id": "opt-01",
+    "occurred_at": "2026-09-30T21:26:00+08:00",
+    "version": 3,
+    "summary": "承诺改签新增成本不超过 200 元",
+    "payload": {
+      "promise_id": "prm-01",
+      "amount": 200,
+      "currency": "CNY"
+    }
+  },
+  {
+    "event_id": "evt-010",
+    "event_type": "NOTIFICATION_DISPATCHED",
+    "aggregate_type": "notification_delivery",
+    "aggregate_id": "ntf-01",
+    "occurred_at": "2026-09-30T21:30:00+08:00",
+    "version": 1,
+    "summary": "向旅客推送冻结方案",
+    "payload": {
+      "party_id": "party-01",
+      "channel": "app_push",
+      "related_event_id": "evt-008"
+    }
+  },
+  {
+    "event_id": "evt-011",
+    "event_type": "NOTIFICATION_DELIVERED",
+    "aggregate_type": "notification_delivery",
+    "aggregate_id": "ntf-01",
+    "occurred_at": "2026-09-30T21:33:00+08:00",
+    "version": 2,
+    "summary": "旅客 App 确认收到推送",
+    "payload": {
+      "party_id": "party-01",
+      "channel": "app_push",
+      "related_event_id": "evt-008"
+    }
+  },
+  {
+    "event_id": "evt-012",
+    "event_type": "CHOICE_ACCEPTED",
+    "aggregate_type": "recovery_option",
+    "aggregate_id": "opt-01",
+    "occurred_at": "2026-09-30T22:10:00+08:00",
+    "version": 4,
+    "summary": "旅客确认冻结方案 frz-01",
+    "payload": {
+      "freeze_id": "frz-01",
+      "accepted_by": "m-01",
+      "preference_note": "三人尽量同机抵达昆明，m-02 境外段可延后一天"
+    }
+  },
+  {
+    "event_id": "evt-013",
+    "event_type": "PARTY_SPLIT",
+    "aggregate_type": "travel_party",
+    "aggregate_id": "party-01",
+    "occurred_at": "2026-09-30T22:12:00+08:00",
+    "version": 2,
+    "summary": "拆分：m-02 移入 party-02，境外段单独改期",
+    "payload": {
+      "new_party_id": "party-02",
+      "moved_member_ids": ["m-02"],
+      "reason": "m-02 护照有效期不足，境外段需改期至证件有效期内"
+    }
+  },
+  {
+    "event_id": "evt-014",
+    "event_type": "SEGMENT_REBOOKED",
+    "aggregate_type": "booking_segment",
+    "aggregate_id": "seg-flight",
+    "occurred_at": "2026-09-30T22:15:00+08:00",
+    "version": 2,
+    "summary": "按确认结果改签西安→昆明航班",
+    "payload": {
+      "based_on_choice": "evt-012",
+      "supplier_order_id": "A-88012345"
+    }
+  },
+  {
+    "event_id": "evt-015",
+    "event_type": "SUPPLIER_CALLBACK_APPLIED",
+    "aggregate_type": "supplier_callback",
+    "aggregate_id": "scb-0001",
+    "occurred_at": "2026-09-30T22:40:00+08:00",
+    "version": 1,
+    "summary": "航司A 回调：改签已出票",
+    "payload": {
+      "supplier": "航司A",
+      "callback_id": "cb-0001",
+      "segment_id": "seg-flight",
+      "reported_status": "ticketed"
+    }
+  },
+  {
+    "event_id": "evt-016",
+    "event_type": "SUPPLIER_CALLBACK_DUPLICATE",
+    "aggregate_type": "supplier_callback",
+    "aggregate_id": "scb-0001",
+    "occurred_at": "2026-09-30T22:41:00+08:00",
+    "version": 2,
+    "summary": "航司A 同一回调重复到达，仅留痕不执行",
+    "payload": {
+      "supplier": "航司A",
+      "callback_id": "cb-0001",
+      "segment_id": "seg-flight",
+      "reported_status": "ticketed"
+    }
+  },
+  {
+    "event_id": "evt-017",
+    "event_type": "SEGMENT_HELD",
+    "aggregate_type": "booking_segment",
+    "aggregate_id": "seg-hotel",
+    "occurred_at": "2026-09-30T22:45:00+08:00",
+    "version": 2,
+    "summary": "昆明酒店仍可有效使用，按确认结果保留",
+    "payload": {
+      "based_on_choice": "evt-012",
+      "supplier_order_id": "H-66001"
+    }
+  },
+  {
+    "event_id": "evt-018",
+    "event_type": "FUNDS_RECONCILED",
+    "aggregate_type": "financial_resolution",
+    "aggregate_id": "fin-01",
+    "occurred_at": "2026-10-01T09:00:00+08:00",
+    "version": 1,
+    "summary": "核销：改签差价 180 元，未超承诺上限 200 元",
+    "payload": {
+      "party_id": "party-01",
+      "lines": [
+        {
+          "kind": "charge",
+          "amount": 180,
+          "currency": "CNY",
+          "promise_id": "prm-01",
+          "supplier": "航司A"
+        }
+      ]
+    }
+  }
+]

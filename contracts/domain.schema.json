@@ -22,7 +22,19 @@
         "SEGMENT_CONFIRMED",
         "DISRUPTION_RECEIVED",
         "OPTION_PROPOSED",
+        "OPTION_FREEZED",
+        "PRICE_PROMISED",
         "CHOICE_ACCEPTED",
+        "SEGMENT_HELD",
+        "SEGMENT_REBOOKED",
+        "SEGMENT_CANCELLED",
+        "PARTY_SPLIT",
+        "DOCUMENT_RESTRICTION_FLAGGED",
+        "SUPPLIER_CALLBACK_APPLIED",
+        "SUPPLIER_CALLBACK_DUPLICATE",
+        "NOTIFICATION_DISPATCHED",
+        "NOTIFICATION_DELIVERED",
+        "NOTIFICATION_FAILED",
         "FUNDS_RECONCILED"
       ]
     },
@@ -32,7 +44,9 @@
         "travel_party",
         "booking_segment",
         "recovery_option",
-        "financial_resolution"
+        "financial_resolution",
+        "supplier_callback",
+        "notification_delivery"
       ]
     },
     "aggregate_id": {
@@ -41,7 +55,8 @@
     },
     "occurred_at": {
       "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "description": "必须带时区偏移（如 +08:00 或 Z），跨时区与跨午夜连接一律按段落地当地时间解释"
     },
     "version": {
       "type": "integer",
@@ -50,7 +65,259 @@
     "summary": {
       "type": "string",
       "minLength": 1
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "串联同一次中断协商的全部事件"
+    },
+    "causation_id": {
+      "type": "string",
+      "description": "直接触发本事件的上游事件 event_id"
+    },
+    "payload": {
+      "type": "object"
     }
   },
-  "additionalProperties": true
+  "additionalProperties": true,
+  "$defs": {
+    "money": {
+      "type": "object",
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 3 }
+      }
+    },
+    "segmentKind": {
+      "type": "string",
+      "enum": ["train", "domestic_flight", "hotel", "county_transfer", "international"]
+    },
+    "supplierStatus": {
+      "type": "string",
+      "enum": ["booked", "waitlisted", "ticketed", "rebooked", "refunded"]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "event_type": { "const": "SEGMENT_CONFIRMED" } } },
+      "then": {
+        "properties": {
+          "aggregate_type": { "const": "booking_segment" },
+          "payload": {
+            "type": "object",
+            "required": ["party_id", "segment_kind", "supplier", "supplier_order_id", "supplier_status", "timezone"],
+            "properties": {
+              "party_id": { "type": "string" },
+              "segment_kind": { "$ref": "#/$defs/segmentKind" },
+              "supplier": { "type": "string" },
+              "supplier_order_id": { "type": "string" },
+              "supplier_status": { "$ref": "#/$defs/supplierStatus" },
+              "timezone": { "type": "string", "description": "段落地 IANA 时区，如 Asia/Shanghai" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "DISRUPTION_RECEIVED" } } },
+      "then": {
+        "properties": {
+          "aggregate_type": { "const": "booking_segment" },
+          "payload": {
+            "type": "object",
+            "required": ["cause", "detected_at"],
+            "properties": {
+              "cause": { "type": "string", "enum": ["delay", "waitlist_failed", "cancelled_by_supplier", "schedule_change"] },
+              "detected_at": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "OPTION_PROPOSED" } } },
+      "then": {
+        "properties": {
+          "aggregate_type": { "const": "recovery_option" },
+          "payload": {
+            "type": "object",
+            "required": ["party_id", "disruption_event_id", "option_kind", "added_cost", "forfeited_benefits", "pending_suppliers"],
+            "properties": {
+              "party_id": { "type": "string" },
+              "disruption_event_id": { "type": "string" },
+              "option_kind": { "type": "string", "enum": ["keep", "rebook", "split_party", "cancel"] },
+              "added_cost": { "$ref": "#/$defs/money" },
+              "forfeited_benefits": { "type": "array", "items": { "type": "string" } },
+              "pending_suppliers": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "OPTION_FREEZED" } } },
+      "then": {
+        "properties": {
+          "aggregate_type": { "const": "recovery_option" },
+          "payload": {
+            "type": "object",
+            "required": ["freeze_id", "expires_at"],
+            "properties": {
+              "freeze_id": { "type": "string" },
+              "expires_at": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "PRICE_PROMISED" } } },
+      "then": {
+        "properties": {
+          "aggregate_type": { "const": "recovery_option" },
+          "payload": {
+            "type": "object",
+            "required": ["promise_id", "amount", "currency"],
+            "properties": {
+              "promise_id": { "type": "string" },
+              "amount": { "type": "number" },
+              "currency": { "type": "string", "minLength": 3, "maxLength": 3 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "CHOICE_ACCEPTED" } } },
+      "then": {
+        "properties": {
+          "aggregate_type": { "const": "recovery_option" },
+          "payload": {
+            "type": "object",
+            "required": ["freeze_id", "accepted_by"],
+            "properties": {
+              "freeze_id": { "type": "string" },
+              "accepted_by": { "type": "string" },
+              "preference_note": { "type": "string", "description": "旅客口头或书面的同行偏好，随确认一并留痕" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "enum": ["SEGMENT_HELD", "SEGMENT_REBOOKED", "SEGMENT_CANCELLED"] } } },
+      "then": {
+        "properties": {
+          "aggregate_type": { "const": "booking_segment" },
+          "payload": {
+            "type": "object",
+            "required": ["based_on_choice", "supplier_order_id"],
+            "properties": {
+              "based_on_choice": { "type": "string", "description": "依据的 CHOICE_ACCEPTED 事件 event_id" },
+              "supplier_order_id": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "PARTY_SPLIT" } } },
+      "then": {
+        "properties": {
+          "aggregate_type": { "const": "travel_party" },
+          "payload": {
+            "type": "object",
+            "required": ["new_party_id", "moved_member_ids", "reason"],
+            "properties": {
+              "new_party_id": { "type": "string" },
+              "moved_member_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+              "reason": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "DOCUMENT_RESTRICTION_FLAGGED" } } },
+      "then": {
+        "properties": {
+          "aggregate_type": { "const": "travel_party" },
+          "payload": {
+            "type": "object",
+            "required": ["member_id", "valid_until"],
+            "properties": {
+              "member_id": { "type": "string" },
+              "valid_until": { "type": "string", "format": "date" },
+              "restricted_segment_ids": { "type": "array", "items": { "type": "string" }, "description": "仅列出受证件期限影响的段，其余成员与段不受约束" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "enum": ["SUPPLIER_CALLBACK_APPLIED", "SUPPLIER_CALLBACK_DUPLICATE"] } } },
+      "then": {
+        "properties": {
+          "aggregate_type": { "const": "supplier_callback" },
+          "payload": {
+            "type": "object",
+            "required": ["supplier", "callback_id", "segment_id", "reported_status"],
+            "properties": {
+              "supplier": { "type": "string" },
+              "callback_id": { "type": "string", "description": "供应方回调幂等键，同一 supplier+callback_id 只允许应用一次" },
+              "segment_id": { "type": "string" },
+              "reported_status": { "$ref": "#/$defs/supplierStatus" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "enum": ["NOTIFICATION_DISPATCHED", "NOTIFICATION_DELIVERED", "NOTIFICATION_FAILED"] } } },
+      "then": {
+        "properties": {
+          "aggregate_type": { "const": "notification_delivery" },
+          "payload": {
+            "type": "object",
+            "required": ["party_id", "channel", "related_event_id"],
+            "properties": {
+              "party_id": { "type": "string" },
+              "channel": { "type": "string", "enum": ["sms", "app_push", "email", "phone_call"] },
+              "related_event_id": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "event_type": { "const": "FUNDS_RECONCILED" } } },
+      "then": {
+        "properties": {
+          "aggregate_type": { "const": "financial_resolution" },
+          "payload": {
+            "type": "object",
+            "required": ["party_id", "lines"],
+            "properties": {
+              "party_id": { "type": "string" },
+              "lines": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["kind", "amount", "currency"],
+                  "properties": {
+                    "kind": { "type": "string", "enum": ["charge", "refund", "compensation"] },
+                    "amount": { "type": "number" },
+                    "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+                    "promise_id": { "type": "string", "description": "对应 PRICE_PROMISED 的承诺编号，争议时沿此回溯" },
+                    "supplier": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }
