@@ -1,6 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://holiday-trip-recovery/contracts/domain.schema.json",
   "title": "假期联程保障协商领域事件",
+  "description": "事件信封对所有事件统一。已登记事件只追加、不复用、不改语义；新增事件必须追加到 event_type 枚举末尾。payload 的形状按事件类型分别定义在 $defs 中。",
   "type": "object",
   "required": [
     "event_id",
@@ -14,7 +16,8 @@
   "properties": {
     "event_id": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "全局唯一，重复投递同一 event_id 必须被拒绝，用于回调与占位的去重"
     },
     "event_type": {
       "type": "string",
@@ -23,7 +26,29 @@
         "DISRUPTION_RECEIVED",
         "OPTION_PROPOSED",
         "CHOICE_ACCEPTED",
-        "FUNDS_RECONCILED"
+        "FUNDS_RECONCILED",
+        "PARTY_REGISTERED",
+        "SEGMENT_BOOKED",
+        "SEGMENT_PRESERVED",
+        "SEGMENT_SPLIT",
+        "SEGMENT_REBOOKED",
+        "SEGMENT_CANCELLED",
+        "WAITLIST_RESULT_RECEIVED",
+        "PRICE_COMMITMENT_RECORDED",
+        "OPTION_FROZEN",
+        "OPTION_EXPIRED",
+        "OPTION_REJECTED",
+        "SUPPLIER_HOLD_PLACED",
+        "SUPPLIER_HOLD_RELEASED",
+        "SUPPLIER_TICKETED",
+        "SUPPLIER_PRICE_CHANGED",
+        "REFUND_REQUESTED",
+        "REFUND_CONFIRMED",
+        "CALLBACK_REJECTED",
+        "NOTIFICATION_ATTEMPTED",
+        "NOTIFICATION_DELIVERED",
+        "NOTIFICATION_FAILED",
+        "PAYMENT_COLLECTED"
       ]
     },
     "aggregate_type": {
@@ -41,16 +66,56 @@
     },
     "occurred_at": {
       "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "description": "事件真实发生时刻（带偏移或 Z）；当地时间语义在 payload 内用 IANA 时区表达"
     },
     "version": {
       "type": "integer",
-      "minimum": 1
+      "minimum": 1,
+      "description": "该聚合流上的版本号，从 1 递增，用于乐观锁"
     },
     "summary": {
       "type": "string",
       "minLength": 1
+    },
+    "causation_id": {
+      "type": "string",
+      "description": "触发本事件的上游事件或回调 id"
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "一次中断协商的贯穿标识"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "供应方请求的幂等键；重复键返回首次结果"
+    },
+    "payload": {
+      "type": "object",
+      "description": "事件负载，形状见 $defs 中同名定义"
     }
   },
-  "additionalProperties": true
+  "additionalProperties": false,
+  "$defs": {
+    "money": {
+      "type": "object",
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+      },
+      "additionalProperties": false
+    },
+    "local_instant": {
+      "type": "object",
+      "description": "跨时区/跨午夜衔接一律同时携带绝对时刻与当地时间规则",
+      "required": ["at", "tz"],
+      "properties": {
+        "at": { "type": "string", "format": "date-time" },
+        "tz": { "type": "string", "description": "IANA 时区，如 Asia/Shanghai" },
+        "local": { "type": "string", "description": "由 at+tz 计算出的当地 YYYY-MM-DDTHH:mm，仅供阅读" }
+      },
+      "additionalProperties": false
+    }
+  }
 }
